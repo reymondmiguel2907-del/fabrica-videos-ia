@@ -100,7 +100,7 @@ async function main() {
   if ((await analyzeAudio(audio)).silent) throw new Error('La narración es silenciosa o inaudible. No se publicará un video sin voz.');
   if (config.format === 'prompt-ia' && !config.demo) {
     plan = await createSceneClips({plan, referenceImage, publicDir, outDir: out,
-      apiKey: process.env.GEMINI_API_KEY, model: config.videoModel});
+      apiKey: process.env.GEMINI_API_KEY, model: config.videoModel, narrationPath: audio});
     await writeFile(resolve(out, 'plan.json'), JSON.stringify(plan, null, 2));
   }
   const timeline = {...buildTimeline(plan, alignment, speed, segments), demo: config.demo};

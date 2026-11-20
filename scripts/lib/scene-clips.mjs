@@ -3,7 +3,7 @@ import {join} from 'node:path';
 import {generateSceneClip} from './google-video.mjs';
 import {probe, run} from './media.mjs';
 
-export async function createSceneClips({plan, referenceImage, publicDir, outDir, apiKey, model,
+export async function createSceneClips({plan, referenceImage, publicDir, outDir, apiKey, model, narrationPath,
   generateImpl = generateSceneClip}) {
   const clips = join(publicDir, 'clips');
   const published = join(outDir, 'clips');
@@ -36,7 +36,14 @@ export async function createSceneClips({plan, referenceImage, publicDir, outDir,
       '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1,format=yuv420p',
       '-an', '-t', String(duration), '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '20',
       '-pix_fmt', 'yuv420p', '-movflags', '+faststart', normalized]);
-    await copyFile(normalized, join(published, name));
+    if (narrationPath) {
+      // Downloadable scene files include their matching voice segment as well.
+      // Only deliberate silent scenes (e.g. countdowns) have no spoken audio.
+      await run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-i', normalized,
+        '-ss', String(scene.startSeconds), '-i', narrationPath, '-map', '0:v:0', '-map', '1:a:0',
+        '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-t', String(duration),
+        '-movflags', '+faststart', join(published, name)]);
+    } else await copyFile(normalized, join(published, name));
     scenes.push({...scene, mediaSrc: `clips/${name}`});
   }
   return {...plan, scenes};

@@ -69,7 +69,7 @@ En **demo** se previsualiza el estilo con una ilustración por código y voz rob
 
 ## Descarga y validación
 
-El artifact contiene `video.mp4`, `storyboard.json`, `subtitles.srt` y `validation.json`. En generación con IA incluye además **`clips/`**, con escenas individuales descargables, y **`plan.json`** cuando se genera el plan. La conservación es de **7 días**.
+El artifact contiene `video.mp4`, `storyboard.json`, `subtitles.srt` y `validation.json`. En generación con IA incluye además **`clips/`**, con escenas individuales descargables y su tramo de narración, y **`plan.json`** cuando se genera el plan. Las escenas de pausa o cuenta atrás conservan el silencio previsto en el guion. La conservación es de **7 días**.
 
 Si la ejecución falla después de generar algunas escenas, el artifact **`escenas-parciales-[número]`** conserva los clips disponibles y el plan. Permite recuperar esas escenas sin presentarlas como un MP4 final validado; si no hay archivos, no se crea ese artifact.
 

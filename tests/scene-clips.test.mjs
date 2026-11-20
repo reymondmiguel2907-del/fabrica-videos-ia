@@ -16,9 +16,12 @@ test('clips generados se normalizan y publican individualmente sin audio nativo'
     {id: 'one', visualPrompt: 'Saluda.', startSeconds: 0, endSeconds: 3},
     {id: 'two', visualPrompt: 'Muestra una pista.', startSeconds: 3, endSeconds: 6}
   ]};
+  const narrationPath = join(directory, 'voice.wav');
+  await run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i',
+    'sine=frequency=600:sample_rate=44100:duration=6', narrationPath]);
   const calls = [];
   const generated = await createSceneClips({plan, publicDir: join(directory, 'public'), outDir: join(directory, 'out'),
-    referenceImage: '/reference.png', apiKey: 'dummy-key', model: 'dummy-model',
+    referenceImage: '/reference.png', apiKey: 'dummy-key', model: 'dummy-model', narrationPath,
     generateImpl: async (request) => {
       calls.push(request);
       await run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i',
@@ -30,8 +33,11 @@ test('clips generados se normalizan y publican individualmente sin audio nativo'
   assert.equal(generated.scenes[1].mediaSrc, 'clips/escena-02.mp4');
   assert.deepEqual(await readdir(join(directory, 'out', 'clips')), ['escena-01.mp4', 'escena-02.mp4']);
   const metadata = await probe(join(directory, 'out', 'clips', 'escena-01.mp4'));
-  assert.equal(metadata.streams.length, 1, 'native voice is removed before mixing one consistent narrator');
+  assert.equal(metadata.streams.length, 2, 'downloadable clips include their consistent narration');
+  assert.equal(metadata.streams.find((stream) => stream.codec_type === 'audio').codec_name, 'aac');
   assert.equal(metadata.streams[0].width, 1080);
   assert.equal(metadata.streams[0].height, 1920);
   assert.equal(metadata.streams[0].avg_frame_rate, '30/1');
+  const internal = await probe(join(directory, 'public', 'clips', 'escena-01.mp4'));
+  assert.equal(internal.streams.length, 1, 'internal Remotion assets have no competing native voice');
 });
