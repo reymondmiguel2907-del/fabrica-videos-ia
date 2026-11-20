@@ -146,17 +146,33 @@ export async function createPromptPlan({prompt, duration, apiKey, model = DEFAUL
   if (typeof model !== 'string' || !/^[A-Za-z0-9._-]{1,100}$/u.test(model)) throw new Error('GOOGLE_TEXT_MODEL no es válido.');
   if (typeof fetchImpl !== 'function') throw new Error('No hay un cliente HTTP para planificar el video.');
   let response, payload;
-  try {
-    response = await fetchImpl(ENDPOINT, {
-      method: 'POST', redirect: 'error', signal: AbortSignal.timeout(90_000),
-      headers: {'Content-Type': 'application/json', 'x-goog-api-key': apiKey.trim(), 'Api-Revision': '2026-05-20'},
-      body: JSON.stringify({model, store: false, input: direction(checkedPrompt, duration),
-        response_format: {type: 'text', mime_type: 'application/json', schema: PLAN_SCHEMA}}),
-    });
-  } catch {
-    throw new Error('No se pudo completar la planificación con Google. Puede haber consumo de API; revisa la cuenta antes de repetir.');
+  // Retry only explicit temporary HTTP 503 responses from the planning endpoint.
+  // Do not retry network timeouts: the server might already have processed the request.
+  // Never retry billable video clip generation here.
+  const requestBody = JSON.stringify({model, store: false, input: direction(checkedPrompt, duration),
+    response_format: {type: 'text', mime_type: 'application/json', schema: PLAN_SCHEMA}});
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      response = await fetchImpl(ENDPOINT, {
+        method: 'POST', redirect: 'error', signal: AbortSignal.timeout(90_000),
+        headers: {'Content-Type': 'application/json', 'x-goog-api-key': apiKey.trim(), 'Api-Revision': '2026-05-20'},
+        body: requestBody,
+      });
+    } catch {
+      throw new Error('No se pudo completar la planificación con Google. Puede haber consumo de API; revisa la cuenta antes de repetir.');
+    }
+    if (!response || typeof response.ok !== 'boolean') throw new Error('Respuesta HTTP de planificación no válida.');
+    if (response.ok || response.status !== 503) break;
+    if (attempt === 3) {
+      throw new Error('Planificación Google HTTP 503: el servicio sigue no disponible después de 3 intentos. Revisa el modelo configurado y el estado de Google antes de repetir; los intentos podrían consumir créditos.');
+    }
+    const retryAfter = response.headers?.get?.('retry-after');
+    const seconds = retryAfter && /^\\d{1,3}$/.test(retryAfter.trim()) ? Number(retryAfter.trim()) : null;
+    const delayMs = seconds !== null ? Math.min(seconds * 1000, 30_000) :
+      Math.min(2_000 * 2 ** (attempt - 1) + Math.floor(Math.random() * 700), 30_000);
+    console.warn(`Google respondió HTTP 503 al planificar (intento ${attempt}/3). Esperando ${Math.ceil(delayMs / 1000)} s antes de reintentar; puede haber consumo de API.`);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
-  if (!response || typeof response.ok !== 'boolean') throw new Error('Respuesta HTTP de planificación no válida.');
   if (!response.ok) throw providerError(response.status);
   try {
     payload = await response.json();
