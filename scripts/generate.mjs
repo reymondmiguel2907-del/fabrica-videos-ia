@@ -4,7 +4,8 @@ import {fileURLToPath} from 'node:url';
 import {bundle} from '@remotion/bundler';
 import {ensureBrowser, selectComposition, renderMedia} from '@remotion/renderer';
 import {readConfig} from './lib/config.mjs';
-import {createPlan, demoAlignment, buildTimeline, toSrt} from './lib/plan.mjs';
+import {createPlan, demoPlanAlignment, buildTimeline, toSrt} from './lib/plan.mjs';
+import {prepareTimedNarration} from './lib/timed-audio.mjs';
 import {generateNarration, generateSoundEffect} from './lib/elevenlabs.mjs';
 import {run, probe, validateProbe, createDemoAudio, prepareNarration, finishVideo} from './lib/media.mjs';
 
@@ -21,21 +22,22 @@ async function main() {
   await rm(temp, {recursive: true, force: true});
   await mkdir(out, {recursive: true});
   await mkdir(temp, {recursive: true});
-  const plan = createPlan(config.theme, config.duration);
+  const plan = createPlan(config.theme, config.duration, config.format);
   // Fail browser/bundling prerequisites before any potentially billable request.
   console.log('Preparando navegador y escenas Remotion…');
   const browserExecutable = process.env.REMOTION_BROWSER_EXECUTABLE || undefined;
   if (!browserExecutable) await ensureBrowser();
   const serveUrl = await bundle({entryPoint: resolve(root, 'src/index.ts'), outDir: resolve(temp, 'bundle')});
-  const previewProps = {...buildTimeline(plan, demoAlignment(plan.text, config.duration)), demo: config.demo};
+  const previewProps = {...buildTimeline(plan, demoPlanAlignment(plan)), demo: config.demo};
   await selectComposition({serveUrl, id: 'VideoVertical', inputProps: previewProps, browserExecutable});
   const audio = resolve(temp, 'audio.wav');
   let alignment;
   let speed = 1;
+  let segments;
   let effect;
   console.log(`Preparando ${config.duration}s. Modo ${config.demo ? 'DEMO: sin llamadas API' : 'ElevenLabs: narración de pago'}.`);
   if (config.demo) {
-    alignment = demoAlignment(plan.text, config.duration);
+    alignment = demoPlanAlignment(plan);
     await createDemoAudio(audio, config.duration, config.sfx);
   } else {
     const source = resolve(temp, 'narration.mp3');
@@ -43,11 +45,15 @@ async function main() {
       apiKey: process.env.ELEVENLABS_API_KEY, voiceId: config.voiceId});
     const measured = Number((await probe(source)).format?.duration);
     if (!Number.isFinite(measured) || measured <= 0) throw new Error('ElevenLabs devolvió un audio sin duración válida.');
-    speed = measured / (config.duration - 0.4);
-    if (speed < 0.55 || speed > 1.8) {
-      throw new Error('La voz no cabe con ritmo natural. Acorta el tema o cambia la duración. No se harán reintentos de pago.');
+    if (plan.timing === 'fixed') {
+      ({segments} = await prepareTimedNarration({plan, alignment, source, output: audio}));
+    } else {
+      speed = measured / (config.duration - 0.4);
+      if (speed < 0.55 || speed > 1.8) {
+        throw new Error('La voz no cabe con ritmo natural. Acorta el tema o cambia la duración. No se harán reintentos de pago.');
+      }
+      await prepareNarration(source, audio, speed, config.duration);
     }
-    await prepareNarration(source, audio, speed, config.duration);
     if (config.sfx) {
       effect = resolve(temp, 'effect.mp3');
       // Optional effect failure must not discard an already paid narration.
@@ -60,7 +66,7 @@ async function main() {
       }
     }
   }
-  const timeline = {...buildTimeline(plan, alignment, speed), demo: config.demo};
+  const timeline = {...buildTimeline(plan, alignment, speed, segments), demo: config.demo};
   await writeFile(resolve(out, 'storyboard.json'), JSON.stringify({
     ...timeline, narration: plan.text, durationSeconds: config.duration,
     audioMode: config.demo ? 'local-demo-tones' : 'elevenlabs',

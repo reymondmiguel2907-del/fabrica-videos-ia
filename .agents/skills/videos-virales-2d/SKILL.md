@@ -9,7 +9,7 @@ description: Crea y modifica videos verticales de animación 2D para TikTok en f
 
 Transformar un tema en una microhistoria animada con gancho, progresión y cierre. Producir MP4 de 1080 × 1920, 30 fps, video H.264 y audio AAC mediante Remotion y FFmpeg. Mejorar claridad y retención sin prometer viralidad ni inventar métricas.
 
-Este proyecto usa un planificador local de historias, sin API de texto. Los temas inspiran ficción; no presentar las frases generadas como hechos investigados. Para contenidos educativos o afirmaciones verificables, contrastar las fuentes y adaptar el guion antes de narrar.
+Este proyecto usa un planificador local de historias y un preset `acertijo-mapa`, sin API de texto. El campo tema es solo un título de 1 a 120 caracteres; no admite el guion completo ni un prompt largo. El argumento se elige con `VIDEO_FORMAT` y se modifica en el código con Codex. Los temas inspiran ficción; no presentar las frases generadas como hechos investigados. Para contenidos educativos o afirmaciones verificables, contrastar las fuentes y adaptar el guion antes de narrar.
 
 ## Contexto y entradas
 
@@ -18,6 +18,7 @@ Leer `README.md`, los archivos actuales en `scripts/`, `src/` y `.github/workflo
 Reutilizar el tema y las preferencias de la conversación. Si falta el tema y no puede inferirse, pedirlo. Valores de partida:
 
 - Duración: 15 segundos; el formulario admite 10, 15, 30, 45 o 60.
+- `VIDEO_FORMAT=historia` por defecto. `VIDEO_FORMAT=acertijo-mapa` exige exactamente 60 segundos.
 - Español, tono cercano y personajes originales en 2D.
 - Formato vertical 9:16, con subtítulos dentro del área segura móvil.
 - `VIDEO_DEMO=true`: sin llamadas a ElevenLabs, audio sintético local sin voz humana.
@@ -46,8 +47,16 @@ npm run typecheck
 Probar primero una demo corta:
 
 ```sh
-VIDEO_THEME='Una idea pequeña cambia el día' VIDEO_DURATION=15 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
+VIDEO_THEME='Una idea pequeña cambia el día' VIDEO_FORMAT=historia VIDEO_DURATION=15 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
 ```
+
+Para el acertijo del mapa, usar el guion integrado y sus tiempos fijos:
+
+```sh
+VIDEO_THEME='Acertijo del mapa' VIDEO_FORMAT=acertijo-mapa VIDEO_DURATION=60 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
+```
+
+El preset reserva los segundos 40–50 para la cuenta atrás y revela la respuesta en el segundo 50. En modo real, solicitar una sola narración con alineación e insertar las pausas en el montaje; no pedir voces separadas por escena. Mantener estos tiempos al cambiar el texto y validar el resultado completo de 60 segundos.
 
 En modo real, `VIDEO_DEMO=false` usa el secreto de GitHub Actions `ELEVENLABS_API_KEY`. La voz masculina fija predeterminada es Adam (`pNInz6obpgDQGcFmaJgB`); `ELEVENLABS_VOICE_ID` permite seleccionar otra voz disponible sin cambiarla de forma aleatoria entre videos. Mantener ajustes estables y utilizar los tiempos devueltos por ElevenLabs para los subtítulos. FFmpeg ajusta duración dentro de los límites del generador.
 
@@ -55,9 +64,13 @@ Nunca imprimir, leer para mostrar, versionar o incluir secretos en artifacts, st
 
 ## Control desde iPhone
 
-Usar `.github/workflows/generar-video.yml`, ejecución manual `workflow_dispatch`, rama `main`. Sus entradas son `tema`, `duracion`, `demo` y `efectos`. Pasarlas como variables de entorno; nunca interpolar el tema o secretos directamente dentro de comandos de shell.
+Usar `.github/workflows/generar-video.yml`, ejecución manual `workflow_dispatch`, rama `main`. Sus entradas son `tema`, `formato`, `duracion`, `demo` y `efectos`. Pasarlas como variables de entorno; nunca interpolar el tema o secretos directamente dentro de comandos de shell.
+
+El paso `Validar formulario` ejecuta `npm run validate-input` sin dependencias ni secretos antes de instalar FFmpeg. Valida título, formato y duración; la credencial para el modo real se comprueba después, antes de llamar al proveedor.
 
 En Safari: Actions → Generar video 2D → Run workflow → main → completar entradas → Run workflow. Tras una ejecución verde, descargar el artifact `video-[número]`, descomprimirlo en Archivos y compartir `video.mp4` a Fotos. Publicar en TikTok solo cuando el usuario lo solicite.
+
+Para el acertijo, explicar al usuario que debe copiar solo `Acertijo del mapa` en tema, seleccionar `formato: acertijo-mapa`, `duracion: 60` y `demo: true`. Si aparece el límite de tema, corregir el título; no sugerir pegar el guion ni ampliar el campo para introducir instrucciones de producción.
 
 ## Validación y entrega
 

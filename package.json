@@ -6,6 +6,7 @@
   "engines": {"node": ">=22"},
   "scripts": {
     "generate": "node scripts/generate.mjs",
+    "validate-input": "node scripts/validate-input.mjs",
     "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "studio": "remotion studio src/index.ts"

@@ -35,6 +35,7 @@ test('todos los tamaños de video tienen escenas continuas y subtítulos en rang
   for (const duration of [10, 15, 30, 45, 60]) {
     const plan = createPlan('Una idea pequeña', duration);
     const timeline = buildTimeline(plan, demoAlignment(plan.text, duration));
+    assert.equal(timeline.format, 'historia', 'el formato previo no debe heredar los valores del acertijo en Studio');
     let frame = 0;
     for (const scene of timeline.scenes) {
       assert.equal(scene.from, frame);

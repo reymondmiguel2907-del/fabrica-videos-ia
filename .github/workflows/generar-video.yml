@@ -4,10 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       tema:
-        description: Tema de la microhistoria (máximo 120 caracteres)
+        description: Solo título corto (1–120 caracteres); el guion se elige con formato
         required: true
         type: string
         default: Una idea pequeña cambia el día
+      formato:
+        description: historia o acertijo-mapa (requiere duración de 60 segundos)
+        required: true
+        type: choice
+        default: historia
+        options:
+          - historia
+          - acertijo-mapa
       duracion:
         description: Duración del video en segundos
         required: true
@@ -48,6 +56,15 @@ jobs:
           node-version: '22'
           cache: npm
 
+      - name: Validar formulario
+        env:
+          VIDEO_THEME: ${{ inputs.tema }}
+          VIDEO_FORMAT: ${{ inputs.formato }}
+          VIDEO_DURATION: ${{ inputs.duracion }}
+          VIDEO_DEMO: ${{ inputs.demo }}
+          VIDEO_SFX: ${{ inputs.efectos }}
+        run: npm run validate-input
+
       - name: Instalar FFmpeg y ffprobe
         run: |
           sudo apt-get update -qq
@@ -72,6 +89,7 @@ jobs:
       - name: Generar video
         env:
           VIDEO_THEME: ${{ inputs.tema }}
+          VIDEO_FORMAT: ${{ inputs.formato }}
           VIDEO_DURATION: ${{ inputs.duracion }}
           VIDEO_DEMO: ${{ inputs.demo }}
           VIDEO_SFX: ${{ inputs.efectos }}

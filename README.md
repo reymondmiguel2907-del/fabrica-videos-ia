@@ -2,7 +2,7 @@
 
 Genera un MP4 vertical de **1080 × 1920, 30 fps**, con animación 2D en Remotion, subtítulos integrados, transiciones y montaje final con FFmpeg. Se controla desde **GitHub Actions en Safari en iPhone**: no necesitas instalar Node.js en el teléfono ni mantener un servidor.
 
-El guion es una microhistoria original generada con plantillas locales a partir del tema. No necesita una API de texto ni investiga datos sobre el tema. Para cambiar el argumento y las frases, edita las plantillas del planificador en `scripts/` con Codex. No se garantiza viralidad.
+El campo **tema es un título corto de 1 a 120 caracteres**, no un espacio para pegar un guion o un prompt largo. El selector **formato** elige el guion integrado: `historia` crea una microhistoria con plantillas locales y `acertijo-mapa` genera el acertijo del mapa de 60 segundos. No necesita una API de texto ni investiga datos sobre el tema. Para cambiar el argumento y las frases, pide a Codex que edite el guion integrado en `scripts/`. No se garantiza viralidad.
 
 Cada cambio a `main` y cada pull request ejecuta también **Verificar fábrica (demo)**: pruebas, TypeScript y un render de 10 segundos sin secretos ni API. Su artifact `demo-validada-[número]` permite revisar el funcionamiento antes de generar narraciones de pago.
 
@@ -10,13 +10,30 @@ Cada cambio a `main` y cada pull request ejecuta también **Verificar fábrica (
 
 1. Abre en Safari [Generar video 2D](https://github.com/reymondmiguel2907-del/fabrica-videos-ia/actions/workflows/generar-video.yml) e inicia sesión en GitHub con una cuenta que tenga permiso de escritura en el repositorio.
 2. Toca **Run workflow**. Selecciona la rama **main**.
-3. Escribe un **tema**, elige **15 segundos**, deja **demo** marcado y **efectos** desmarcado. Toca el botón verde **Run workflow**.
+3. Escribe un **tema corto**, elige **formato: historia** y **15 segundos**, deja **demo** marcado y **efectos** desmarcado. Toca el botón verde **Run workflow**.
 4. Abre la ejecución más reciente. Si aún no aparece, actualiza la página. Espera a que el trabajo termine en verde; el render puede tardar varios minutos.
 5. En el resumen de la ejecución, baja hasta **Artifacts** y toca **video-[número]** para descargar el ZIP.
 6. En Safari, abre **Descargas** y luego el archivo en **Archivos**. Toca el ZIP para descomprimirlo, abre `video.mp4` y usa **Compartir → Guardar video** para añadirlo a Fotos.
 7. Abre TikTok y selecciona ese video desde Fotos. La fábrica prepara el archivo; la publicación la haces tú.
 
 Si GitHub oculta el formulario en la vista móvil, usa el menú de página de Safari → **Solicitar sitio web de escritorio** y vuelve a abrir el enlace de Actions. Si Actions está desactivado, abre la pestaña **Actions** y habilítalo primero.
+
+### Generar el acertijo del mapa
+
+En **Run workflow**, selecciona estos valores:
+
+| Campo | Valor |
+| --- | --- |
+| Rama | `main` |
+| Tema | `Acertijo del mapa` |
+| Formato | `acertijo-mapa` |
+| Duración | `60` |
+| Demo | Marcado (`true`) |
+| Efectos | Desmarcado (`false`) |
+
+Copia **solo `Acertijo del mapa`** en tema; no pegues allí el guion completo. El preset ya contiene el guion, las escenas y los tiempos. Incluye una cuenta atrás entre los segundos 40 y 50 y revela la respuesta en el segundo 50. Este formato exige exactamente 60 segundos. Para personalizar el acertijo, pide a Codex que cambie su guion integrado.
+
+La demo no usa la API. En modo real, la narración se solicita en una sola petición a ElevenLabs con alineación; el montaje inserta los silencios y la cuenta atrás en sus tiempos, sin generar una petición de voz por escena.
 
 ### Qué hace el modo demo
 
@@ -39,8 +56,9 @@ La narración devuelve tiempos por carácter para sincronizar los subtítulos. F
 
 | Entrada | Uso |
 | --- | --- |
-| `tema` | Idea central de la microhistoria, en español; máximo 120 caracteres. Se trata como datos, nunca como un comando. |
-| `duracion` | El formulario permite 10, 15, 30, 45 o 60 segundos. Localmente admite enteros entre 10 y 60. |
+| `tema` | Solo título corto en español, de 1 a 120 caracteres. Ejemplo: `Acertijo del mapa`. No admite el guion completo ni un prompt largo. Se trata como datos, nunca como un comando. |
+| `formato` | `historia` (predeterminado) o `acertijo-mapa` (guion integrado de 60 segundos). |
+| `duracion` | El formulario permite 10, 15, 30, 45 o 60 segundos. `acertijo-mapa` exige `60`. Localmente, `historia` admite enteros entre 10 y 60. |
 | `demo` | Marcado de forma predeterminada: sin API ni voz humana. |
 | `efectos` | Opcional; desmarcado de forma predeterminada. En modo real puede gastar créditos. |
 
@@ -65,7 +83,13 @@ Requisitos: Node.js 22 o posterior, npm, FFmpeg y ffprobe en `PATH`. Remotion de
 npm ci
 npm test
 npm run typecheck
-VIDEO_THEME='Una idea pequeña cambia el día' VIDEO_DURATION=15 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
+VIDEO_THEME='Una idea pequeña cambia el día' VIDEO_FORMAT=historia VIDEO_DURATION=15 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
+```
+
+Para probar el preset completo:
+
+```sh
+VIDEO_THEME='Acertijo del mapa' VIDEO_FORMAT=acertijo-mapa VIDEO_DURATION=60 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
 ```
 
 Para una narración real, define `ELEVENLABS_API_KEY` mediante tu gestor de secretos o entorno local y usa `VIDEO_DEMO=false`. No escribas la clave en archivos versionados ni en el historial del terminal. En GitHub Actions solo se inyecta al paso de generación. `ELEVENLABS_VOICE_ID` es opcional.
@@ -76,8 +100,12 @@ El código, la Skill y los archivos de configuración son reutilizables. Antes d
 
 Abre la ejecución roja y el paso que falló. Los mensajes indican el problema sin mostrar claves ni el cuerpo de errores del proveedor.
 
+El paso **Validar formulario** comprueba el título, el formato y la duración antes de instalar dependencias o generar contenido. No usa secretos ni gasta créditos. La clave se comprueba posteriormente, solo si eliges una narración real.
+
 | Problema | Qué revisar |
 | --- | --- |
+| El tema supera 120 caracteres | En tema escribe únicamente un título corto, por ejemplo `Acertijo del mapa`. El texto del guion va en el preset del código; no lo pegues en el formulario. |
+| El formato acertijo-mapa requiere 60 segundos | Selecciona `duracion: 60`; las pausas, cuenta atrás y respuesta tienen tiempos fijos. |
 | Falta la clave | Crea el secreto `ELEVENLABS_API_KEY` o activa `demo`. |
 | Autorización o voz no disponible | Verifica la clave, sus permisos y el ID de voz en tu cuenta de ElevenLabs. |
 | Cuota o límite de solicitudes | Revisa tus créditos y límites en ElevenLabs antes de volver a ejecutar. |

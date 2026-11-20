@@ -1,7 +1,10 @@
+import {createRiddlePlan, demoRiddleAlignment, fixedTimeline} from './riddle.mjs';
+
 export const FPS = 30;
 
 // Microficción deliberada: no presenta hechos inventados sobre el tema.
-export function createPlan(theme, duration) {
+export function createPlan(theme, duration, format = 'historia') {
+  if (format === 'acertijo-mapa') return createRiddlePlan(theme, duration);
   const long = duration >= 40;
   const medium = duration >= 20;
   const all = [
@@ -28,7 +31,7 @@ export function createPlan(theme, duration) {
     scenes.find((scene) => scene.kind === 'action').narration += ' Cada intento le muestra una forma distinta de seguir adelante.';
   }
   const text = scenes.map((scene) => scene.narration).join(' ');
-  return {theme, duration, fps: FPS, width: 1080, height: 1920, scenes, text};
+  return {theme, duration, fps: FPS, width: 1080, height: 1920, format: 'historia', scenes, text};
 }
 
 export function demoAlignment(text, duration) {
@@ -41,10 +44,15 @@ export function demoAlignment(text, duration) {
   };
 }
 
-export function buildTimeline(plan, alignment, speed = 1) {
+export function demoPlanAlignment(plan) {
+  return plan.timing === 'fixed' ? demoRiddleAlignment(plan) : demoAlignment(plan.text, plan.duration);
+}
+
+export function buildTimeline(plan, alignment, speed = 1, segments) {
   const {characters, character_start_times_seconds: starts, character_end_times_seconds: ends} = alignment;
   if (characters.join('') !== plan.text) throw new Error('La alineación de la voz no coincide con el guion.');
   if (!Number.isFinite(speed) || speed <= 0) throw new Error('Velocidad de voz inválida.');
+  if (plan.timing === 'fixed') return fixedTimeline(plan, alignment, segments);
   const totalFrames = plan.duration * FPS;
   const toFrame = (time) => Math.max(0, Math.min(totalFrames, Math.round(time / speed * FPS)));
   let offset = 0;
@@ -81,7 +89,7 @@ export function buildTimeline(plan, alignment, speed = 1) {
     return {text: items.map((w) => w.text).join(' '), startFrame,
       endFrame: Math.max(startFrame + 1, toFrame(items.at(-1).end))};
   }).filter((caption) => caption.startFrame < totalFrames);
-  return {theme: plan.theme, durationInFrames: totalFrames, scenes, captions};
+  return {theme: plan.theme, format: plan.format, durationInFrames: totalFrames, scenes, captions};
 }
 
 export function toSrt(captions) {
