@@ -6,7 +6,12 @@ export async function run(program, args, options = {}) {
   try {
     return await execute(program, args, {timeout: 300_000, maxBuffer: 8 * 1024 * 1024, ...options});
   } catch (error) {
-    if (error.code === 'ENOENT') throw new Error(`No se encontró ${program}. Instala FFmpeg y ffprobe antes de generar.`);
+    if (error.code === 'ENOENT') {
+      if (program === 'espeak-ng') {
+        throw new Error('No se encontró espeak-ng. Instala espeak-ng para generar la voz robótica demo sin API; en Ubuntu: sudo apt-get install espeak-ng.');
+      }
+      throw new Error(`No se encontró ${program}. Instala FFmpeg y ffprobe antes de generar.`);
+    }
     // No imprimir argumentos, entorno ni salida de subprocesos arbitrarios.
     throw new Error(`${program} falló (${error.killed ? 'tiempo agotado' : 'código ' + error.code}). Revisa los archivos y la instalación.`);
   }
@@ -49,12 +54,30 @@ export function tempoFilters(speed) {
 }
 
 export async function createDemoAudio(output, duration, sfx) {
-  // Audio local de demostración: pulso suave, sin TTS, servicios ni créditos.
+  // Legacy local tone helper. Main demo narration uses demo-voice.mjs instead.
   const filter = `sine=frequency=220:sample_rate=44100:duration=${duration}`;
   const effects = sfx ? ',tremolo=f=3:d=0.7' : '';
   await run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi', '-i', filter,
-    '-af', `volume=0.035,afade=t=in:d=0.3,afade=t=out:st=${duration - 0.4}:d=0.4${effects}`,
+    '-af', `volume=1.4,afade=t=in:d=0.3,afade=t=out:st=${duration - 0.4}:d=0.4${effects}`,
     '-c:a', 'pcm_s16le', output]);
+}
+
+/** Decode and measure actual samples; an audio stream alone can still be silent. */
+export async function analyzeAudio(path) {
+  const {stderr} = await run('ffmpeg', ['-hide_banner', '-nostats', '-loglevel', 'info',
+    '-i', path, '-map', '0:a:0', '-vn', '-sn', '-dn', '-af', 'volumedetect', '-f', 'null', '-']);
+  const measurement = (name) => {
+    const match = stderr.match(new RegExp(`\\b${name}:\\s*(-?inf|[-+]?\\d+(?:\\.\\d+)?)\\s*dB`, 'i'));
+    if (!match) throw new Error('No se pudo medir el volumen de la pista de audio.');
+    const value = Number(match[1]);
+    // JSON must not contain Infinity, even when FFmpeg reports digital silence.
+    if (match[1].toLowerCase() === '-inf') return -120;
+    if (!Number.isFinite(value)) throw new Error('La medición de volumen del audio no es válida.');
+    return value;
+  };
+  const meanDb = measurement('mean_volume');
+  const peakDb = measurement('max_volume');
+  return {meanDb, peakDb, silent: meanDb <= -55};
 }
 
 export async function prepareNarration(input, output, speed, duration) {

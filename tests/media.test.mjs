@@ -4,7 +4,7 @@ import {spawnSync} from 'node:child_process';
 import {mkdtemp, rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {run, probe, validateProbe, prepareNarration, finishVideo} from '../scripts/lib/media.mjs';
+import {run, probe, validateProbe, prepareNarration, finishVideo, createDemoAudio, analyzeAudio} from '../scripts/lib/media.mjs';
 
 const ffmpegMissing = spawnSync('ffmpeg', ['-version'], {stdio: 'ignore'}).error?.code === 'ENOENT';
 
@@ -87,4 +87,34 @@ test('real FFmpeg: full-range source, retimed narration and optional delayed eff
     'first SFX is audible near the first requested transition');
   assert.ok(amplitude(decoded[1], 0.55, 0.62, 1100) > background * 4,
     'second SFX is audible near the delayed transition');
+});
+
+test('audio loudness analysis distinguishes actual silence, inaudible samples and audible demo audio', {
+  skip: ffmpegMissing ? 'FFmpeg no está instalado.' : false,
+  timeout: 30_000,
+}, async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), 'audio-analysis-test-'));
+  t.after(() => rm(directory, {recursive: true, force: true}));
+  const silent = join(directory, 'silence.wav');
+  const quiet = join(directory, 'inaudible.wav');
+  const audible = join(directory, 'audible.wav');
+  await run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi',
+    '-i', 'anullsrc=r=44100:cl=mono', '-t', '1', '-c:a', 'pcm_s16le', silent]);
+  await run('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'lavfi',
+    '-i', 'sine=frequency=440:duration=1', '-af', 'volume=0.001', '-c:a', 'pcm_s16le', quiet]);
+  await createDemoAudio(audible, 1, true);
+  const silenceReport = await analyzeAudio(silent);
+  const quietReport = await analyzeAudio(quiet);
+  const audibleReport = await analyzeAudio(audible);
+  assert.equal(silenceReport.silent, true);
+  assert.equal(quietReport.silent, true);
+  assert.ok(quietReport.meanDb <= -55);
+  assert.equal(audibleReport.silent, false);
+  assert.ok(audibleReport.meanDb > -35, 'legacy demo tones must remain audible on phones');
+  for (const report of [silenceReport, quietReport, audibleReport]) {
+    assert.ok(Number.isFinite(report.meanDb));
+    assert.ok(Number.isFinite(report.peakDb));
+    assert.ok(report.peakDb >= report.meanDb);
+    assert.deepEqual(JSON.parse(JSON.stringify(report)), report, 'report must be safe as a JSON artifact');
+  }
 });

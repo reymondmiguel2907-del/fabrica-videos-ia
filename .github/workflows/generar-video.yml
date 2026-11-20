@@ -4,16 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       tema:
-        description: Solo título corto (1–120 caracteres); el guion se elige con formato
-        required: true
+        description: Nombre corto opcional (máximo 120 caracteres); escribe el guion en prompt
+        required: false
         type: string
-        default: Una idea pequeña cambia el día
+        default: Video de acertijos
+      prompt:
+        description: Escribe aquí guion/prompt completo (máximo 5000 caracteres); modo real genera clips con IA
+        required: false
+        type: string
+        default: Crea un video vertical de 15 segundos con un presentador humano cartoon 2D sobre fondo azul, preguntas visuales, voz masculina en español y subtítulos blancos con contorno negro. Abre con una pregunta curiosa y revela su respuesta al final.
       formato:
-        description: historia o acertijo-mapa (requiere duración de 60 segundos)
+        description: prompt-ia para prompt libre; acertijo-mapa requiere 60 segundos
         required: true
         type: choice
-        default: historia
+        default: prompt-ia
         options:
+          - prompt-ia
           - historia
           - acertijo-mapa
       duracion:
@@ -28,7 +34,7 @@ on:
           - '45'
           - '60'
       demo:
-        description: Demo sin API (audio sintético, sin voz humana ni créditos)
+        description: Vista previa con dibujos de código y voz robótica local; sin clips IA ni créditos
         required: true
         type: boolean
         default: true
@@ -45,7 +51,7 @@ jobs:
   generar:
     name: Renderizar y validar MP4
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - name: Descargar repositorio
         uses: actions/checkout@v4
@@ -59,16 +65,17 @@ jobs:
       - name: Validar formulario
         env:
           VIDEO_THEME: ${{ inputs.tema }}
+          VIDEO_PROMPT: ${{ inputs.prompt }}
           VIDEO_FORMAT: ${{ inputs.formato }}
           VIDEO_DURATION: ${{ inputs.duracion }}
           VIDEO_DEMO: ${{ inputs.demo }}
           VIDEO_SFX: ${{ inputs.efectos }}
         run: npm run validate-input
 
-      - name: Instalar FFmpeg y ffprobe
+      - name: Instalar FFmpeg, ffprobe y voz local
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg espeak-ng
           ffmpeg -version
           ffprobe -version
 
@@ -89,12 +96,16 @@ jobs:
       - name: Generar video
         env:
           VIDEO_THEME: ${{ inputs.tema }}
+          VIDEO_PROMPT: ${{ inputs.prompt }}
           VIDEO_FORMAT: ${{ inputs.formato }}
           VIDEO_DURATION: ${{ inputs.duracion }}
           VIDEO_DEMO: ${{ inputs.demo }}
           VIDEO_SFX: ${{ inputs.efectos }}
           ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
           ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_TEXT_MODEL: ${{ vars.GOOGLE_TEXT_MODEL }}
+          GOOGLE_VIDEO_MODEL: ${{ vars.GOOGLE_VIDEO_MODEL }}
         run: npm run generate
 
       - name: Comprobar entregables
@@ -108,12 +119,19 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: video-${{ github.run_number }}
-          path: |
-            out/video.mp4
-            out/storyboard.json
-            out/subtitles.srt
-            out/validation.json
+          path: out/
           if-no-files-found: error
+          retention-days: 7
+
+      - name: Recuperar escenas ya generadas si falla el montaje
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: escenas-parciales-${{ github.run_number }}
+          path: |
+            out/clips/
+            out/plan.json
+          if-no-files-found: ignore
           retention-days: 7
 
       - name: Mostrar instrucciones de descarga
@@ -122,7 +140,8 @@ jobs:
           ## Video listo
 
           Abre el resumen de esta ejecución y toca **Artifacts → video-[número]**.
-          El ZIP contiene `video.mp4`, `storyboard.json`, `subtitles.srt` y `validation.json`.
+          El ZIP contiene `video.mp4`, guion, subtítulos y validación.
+          Cuando se generan escenas con IA, también incluye `clips/` y `plan.json`.
           En iPhone: descarga el ZIP, ábrelo en **Archivos** y descomprímelo.
           Abre `video.mp4` y usa **Compartir → Guardar video** para llevarlo a Fotos.
 

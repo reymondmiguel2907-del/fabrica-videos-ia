@@ -8,7 +8,7 @@ test('el formulario indica dónde poner instrucciones largas sin repetir su cont
   const prompt = 'Crea un video animado de exactamente 60 segundos.\n'.repeat(10);
   assert.throws(() => readConfig({VIDEO_THEME: prompt}), (error) => {
     assert.match(error.message, /título corto/);
-    assert.match(error.message, /instrucciones largas se envían a Codex/);
+    assert.match(error.message, /instrucciones largas en el campo prompt/);
     assert.ok(!error.message.includes(prompt));
     return true;
   });

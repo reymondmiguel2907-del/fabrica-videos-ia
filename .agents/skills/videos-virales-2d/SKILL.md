@@ -1,87 +1,73 @@
 ---
 name: videos-virales-2d
-description: Crea y modifica videos verticales de animación 2D para TikTok en fabrica-videos-ia. Usa esta habilidad al escribir guiones, ajustar escenas Remotion, generar narración ElevenLabs o producir y validar MP4 mediante el workflow manual y el generador local.
+description: Crea videos verticales 2D a partir de prompts libres en fabrica-videos-ia. Usa esta habilidad para desarrollar guiones y clips con Google, integrar voz ElevenLabs, ajustar escenas Remotion o generar, validar y entregar MP4 desde el workflow manual y el generador local.
 ---
 
 # Videos virales 2D
 
-## Objetivo y alcance
+## Objetivo y modos
 
-Transformar un tema en una microhistoria animada con gancho, progresión y cierre. Producir MP4 de 1080 × 1920, 30 fps, video H.264 y audio AAC mediante Remotion y FFmpeg. Mejorar claridad y retención sin prometer viralidad ni inventar métricas.
+Crear un video vertical de 1080 × 1920, 30 fps, con voz audible, subtítulos legibles y escenas coherentes. Mejorar claridad y retención sin garantizar viralidad.
 
-Este proyecto usa un planificador local de historias y un preset `acertijo-mapa`, sin API de texto. El campo tema es solo un título de 1 a 120 caracteres; no admite el guion completo ni un prompt largo. El argumento se elige con `VIDEO_FORMAT` y se modifica en el código con Codex. Los temas inspiran ficción; no presentar las frases generadas como hechos investigados. Para contenidos educativos o afirmaciones verificables, contrastar las fuentes y adaptar el guion antes de narrar.
+Leer `README.md`, `scripts/`, `src/` y los workflows actuales antes de cambiar sus contratos. El modo predeterminado `VIDEO_FORMAT=prompt-ia` acepta un guion o prompt libre de hasta 5000 caracteres en `VIDEO_PROMPT`. `VIDEO_THEME` es únicamente un nombre corto opcional de hasta 120 caracteres. No pedir que el usuario pegue el guion en tema.
 
-## Contexto y entradas
+- `VIDEO_DEMO=true`: vista previa ilustrada por código con voz robótica española local, sin llamadas a APIs ni clips IA nuevos. Requiere espeak-ng. No presentarla como generación IA gratuita o como cumplimiento visual completo del prompt.
+- `VIDEO_DEMO=false` y `prompt-ia`: Google desarrolla el plan y genera clips; ElevenLabs genera la narración masculina; Remotion/FFmpeg montan el MP4.
+- `historia`: mantiene la microhistoria por plantillas locales.
+- `acertijo-mapa`: mantiene el preset de 60 segundos, cuenta atrás 40–50 y respuesta en el segundo 50.
 
-Leer `README.md`, los archivos actuales en `scripts/`, `src/` y `.github/workflows/generar-video.yml` antes de cambiar contratos entre planificador, narración y render.
+La integración de Google es una API independiente de Flow, con su propio acceso y facturación. No usa una sesión, cuenta, créditos ni backend de Flow.
 
-Reutilizar el tema y las preferencias de la conversación. Si falta el tema y no puede inferirse, pedirlo. Valores de partida:
+## Recoger y desarrollar el prompt
 
-- Duración: 15 segundos; el formulario admite 10, 15, 30, 45 o 60.
-- `VIDEO_FORMAT=historia` por defecto. `VIDEO_FORMAT=acertijo-mapa` exige exactamente 60 segundos.
-- Español, tono cercano y personajes originales en 2D.
-- Formato vertical 9:16, con subtítulos dentro del área segura móvil.
-- `VIDEO_DEMO=true`: sin llamadas a ElevenLabs, audio sintético local sin voz humana.
-- `VIDEO_SFX=false`: efectos opcionales desactivados.
+Reutilizar el guion y las preferencias de la conversación. Si hace falta, pedir únicamente la idea o texto que no pueda inferirse. Los valores de partida son 15 segundos, español, formato vertical, `prompt-ia`, demo activa y efectos desactivados. Las instrucciones del usuario prevalecen.
 
-Las instrucciones del usuario prevalecen sobre los valores por defecto. Conservar personajes, referencias y textos ya aprobados.
+Separar narración, instrucciones de imagen y tiempos. Mantener gancho temprano, desarrollo comprensible y una resolución que responda a lo prometido. Para el estilo humano cartoon 2D, mantener un presentador consistente, contornos limpios, fondo azul, iconos de preguntas o cerebros y subtítulos blancos con contorno negro cuando corresponda a la referencia del usuario. No cambiar detalles ya aprobados.
 
-## Flujo creativo
+Preparar el retrato original del presentador con la composición `CharacterReference` y reutilizar su PNG como referencia de todos los clips de Google. Inspirarse en el estilo solicitado sin prometer una copia exacta de una foto ni continuidad perfecta de un modelo generativo.
 
-1. Definir una idea central y un gancho visible en los primeros segundos.
-2. Escribir una narración breve: gancho → obstáculo → acción → giro → resolución. Ajustar cantidad de palabras a la duración.
-3. Dividir el guion en escenas contiguas; cada escena tiene una acción principal y propósito narrativo. Mantener sincronizados narración, títulos y subtítulos.
-4. Mantener silueta, paleta y proporciones de los personajes entre planos. Animar con los frames de Remotion; evitar aleatoriedad no determinista, peticiones de red o fuentes externas durante el render.
-5. Acompañar la historia con movimiento y transiciones legibles. Mantener texto breve, contrastado y lejos de la interfaz de TikTok. Evitar destellos rápidos.
+Si se pide un acertijo de 60 segundos con revelación a los 50, reservar 40–50 para la cuenta atrás sin narración y no revelar la respuesta visualmente antes. Describir las escenas sin incluir la respuesta prematuramente en prompts de clip.
 
-## Generación y voz
+Revisar afirmaciones verificables antes de presentarlas como hechos. Los modelos pueden alterar detalles visuales; distinguir guion planeado, clips generados y resultado inspeccionado.
 
-Preparar Node.js 22+, FFmpeg y ffprobe. Instalar y revisar:
+## APIs, credenciales y costo
+
+El modo real `prompt-ia` requiere secretos de GitHub Actions `GEMINI_API_KEY` y `ELEVENLABS_API_KEY`. Inyectarlos únicamente al paso de generación. Nunca imprimirlos, incluirlos en artifacts, props de Remotion o errores, ni pedir que se peguen en prompts o código.
+
+La voz masculina fija predeterminada es Adam (`pNInz6obpgDQGcFmaJgB`), modelo `eleven_multilingual_v2`. `ELEVENLABS_VOICE_ID` permite cambiarla por otra voz disponible de la cuenta. Mantener una voz consistente y usar la alineación para subtítulos y pausas.
+
+Las variables opcionales `GOOGLE_TEXT_MODEL` y `GOOGLE_VIDEO_MODEL` controlan los modelos; los valores predeterminados de la aplicación son `gemini-3.8-flash` y `gemini-omni-1.2-flash`. Comprobar nombres y acceso vigentes en https://aistudio.google.com/docs/video y https://ai.google.dev/gemini-api/docs antes de afirmar compatibilidad con una cuenta. La configuración no demuestra una llamada real exitosa.
+
+No gastar créditos para comprobar código si los mocks y la demo cubren el caso. No añadir reintentos automáticos de peticiones pagadas ni convertir un fallo real silenciosamente en una demo. `VIDEO_SFX=false` evita una petición opcional adicional de sonido.
+
+## Ejecutar y controlar desde iPhone
+
+Preparar Node.js 22+, FFmpeg, ffprobe, espeak-ng y un navegador para Remotion. Verificar:
 
 ```sh
 npm ci
 npm test
 npm run typecheck
+VIDEO_FORMAT=prompt-ia VIDEO_PROMPT='Un presentador humano cartoon 2D hace una pregunta curiosa y revela la respuesta al final.' VIDEO_DURATION=15 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
 ```
 
-Probar primero una demo corta:
+El workflow `.github/workflows/generar-video.yml` admite `tema`, `prompt`, `formato`, `duracion`, `demo` y `efectos`. Pasarlos mediante variables de entorno, nunca interpolarlos directamente en comandos shell. `Validar formulario` ejecuta `npm run validate-input` antes de instalar dependencias y sin secretos.
 
-```sh
-VIDEO_THEME='Una idea pequeña cambia el día' VIDEO_FORMAT=historia VIDEO_DURATION=15 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
-```
+En Safari: Actions → Generar video 2D → Run workflow → main → pegar el guion en **prompt** → `formato: prompt-ia` → duración coherente. Para una vista previa mantener demo; para clips IA y voz de ElevenLabs, configurar las claves y desmarcar demo. Tras una ejecución verde, descargar el artifact, descomprimirlo en Archivos y guardar el MP4 en Fotos. Publicar solo cuando se solicite.
 
-Para el acertijo del mapa, usar el guion integrado y sus tiempos fijos:
+## Validar y entregar
 
-```sh
-VIDEO_THEME='Acertijo del mapa' VIDEO_FORMAT=acertijo-mapa VIDEO_DURATION=60 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
-```
-
-El preset reserva los segundos 40–50 para la cuenta atrás y revela la respuesta en el segundo 50. En modo real, solicitar una sola narración con alineación e insertar las pausas en el montaje; no pedir voces separadas por escena. Mantener estos tiempos al cambiar el texto y validar el resultado completo de 60 segundos.
-
-En modo real, `VIDEO_DEMO=false` usa el secreto de GitHub Actions `ELEVENLABS_API_KEY`. La voz masculina fija predeterminada es Adam (`pNInz6obpgDQGcFmaJgB`); `ELEVENLABS_VOICE_ID` permite seleccionar otra voz disponible sin cambiarla de forma aleatoria entre videos. Mantener ajustes estables y utilizar los tiempos devueltos por ElevenLabs para los subtítulos. FFmpeg ajusta duración dentro de los límites del generador.
-
-Nunca imprimir, leer para mostrar, versionar o incluir secretos en artifacts, storyboard, props de Remotion o mensajes de error. No registrar cuerpos crudos de errores del proveedor. El modo demo debe ignorar las credenciales y no realizar peticiones de contenido. Las llamadas reales consumen créditos; no añadir reintentos automáticos tras peticiones pagadas ni sustituir un error real por una demo sin avisar.
-
-## Control desde iPhone
-
-Usar `.github/workflows/generar-video.yml`, ejecución manual `workflow_dispatch`, rama `main`. Sus entradas son `tema`, `formato`, `duracion`, `demo` y `efectos`. Pasarlas como variables de entorno; nunca interpolar el tema o secretos directamente dentro de comandos de shell.
-
-El paso `Validar formulario` ejecuta `npm run validate-input` sin dependencias ni secretos antes de instalar FFmpeg. Valida título, formato y duración; la credencial para el modo real se comprueba después, antes de llamar al proveedor.
-
-En Safari: Actions → Generar video 2D → Run workflow → main → completar entradas → Run workflow. Tras una ejecución verde, descargar el artifact `video-[número]`, descomprimirlo en Archivos y compartir `video.mp4` a Fotos. Publicar en TikTok solo cuando el usuario lo solicite.
-
-Para el acertijo, explicar al usuario que debe copiar solo `Acertijo del mapa` en tema, seleccionar `formato: acertijo-mapa`, `duracion: 60` y `demo: true`. Si aparece el límite de tema, corregir el título; no sugerir pegar el guion ni ampliar el campo para introducir instrucciones de producción.
-
-## Validación y entrega
-
-Ejecutar las pruebas pertinentes y el chequeo de TypeScript tras cambios. Renderizar una demo cuando se modifiquen composición, tiempos, audio o montaje. No gastar créditos para comprobar cambios de código si las pruebas simuladas y el modo demo cubren el caso.
+Ejecutar pruebas pertinentes y TypeScript; renderizar una demo tras cambios de composición, tiempos, audio o montaje. Usar animaciones deterministas en Remotion y recursos locales preparados antes del render.
 
 Antes de declarar éxito:
 
-- Revisar que ffprobe confirme 1080 × 1920, H.264, pista AAC y duración solicitada dentro de la tolerancia del generador.
-- Verificar que el storyboard cubra todos los frames sin huecos y los subtítulos correspondan a la narración.
-- Inspeccionar frames representativos y escuchar el audio si hay reproducción disponible; distinguir estas revisiones de la validación técnica.
-- Comprobar que existan `out/video.mp4`, `out/storyboard.json`, `out/subtitles.srt` y `out/validation.json`.
-- Informar qué se probó, qué queda pendiente y el enlace de descarga cuando exista. No presentar una simulación o un storyboard como un video terminado.
+- Comprobar con ffprobe resolución 1080 × 1920, H.264, AAC y duración dentro de tolerancia.
+- Analizar volumen y rechazar pistas silenciosas; la demo debe tener voz robótica audible, no solo tonos de cuenta atrás.
+- Verificar continuidad de escenas, sincronización de subtítulos, área segura y legibilidad móvil.
+- Inspeccionar frames y escuchar el audio cuando las herramientas lo permitan, diferenciando esa revisión de una validación técnica.
+- Confirmar `out/video.mp4`, `out/storyboard.json`, `out/subtitles.srt` y `out/validation.json`. En generación IA entregar también `out/clips/*.mp4` y `out/plan.json` cuando exista.
+- Informar qué se probó y si las APIs reales quedaron pendientes. No presentar una demo, un mock o un plan como clips IA verificados.
 
-No incluir dependencias, credenciales, temporales ni renders grandes en Git. El workflow publica únicamente los cuatro entregables, con retención de 7 días. Revisar que el contenido sea adecuado para un artifact de un repositorio público.
+Los workflows publican `out/` con retención de 7 días. Mantener ese directorio libre de secretos y temporales. No versionar renders, dependencias ni credenciales. Revisar que los guiones y prompts exportados sean aptos para artifacts de un repositorio público.
+
+Si falla una ejecución con clips ya generados, el workflow manual publica únicamente esas escenas y `plan.json` en `escenas-parciales-[número]`; recuperar estos archivos sin afirmar que el MP4 final se validó. No perder clips pagados por un fallo posterior del montaje.

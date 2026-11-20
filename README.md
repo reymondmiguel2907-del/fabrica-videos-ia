@@ -1,116 +1,91 @@
-# Fábrica de videos 2D
+# Fábrica de videos 2D desde el iPhone
 
-Genera un MP4 vertical de **1080 × 1920, 30 fps**, con animación 2D en Remotion, subtítulos integrados, transiciones y montaje final con FFmpeg. Se controla desde **GitHub Actions en Safari en iPhone**: no necesitas instalar Node.js en el teléfono ni mantener un servidor.
+Escribe un **prompt completo** y descarga un MP4 vertical de **1080 × 1920, 30 fps**, con voz, subtítulos y escenas. El control está en **GitHub Actions**, accesible desde Safari; no necesitas instalar herramientas en el iPhone.
 
-El campo **tema es un título corto de 1 a 120 caracteres**, no un espacio para pegar un guion o un prompt largo. El selector **formato** elige el guion integrado: `historia` crea una microhistoria con plantillas locales y `acertijo-mapa` genera el acertijo del mapa de 60 segundos. No necesita una API de texto ni investiga datos sobre el tema. Para cambiar el argumento y las frases, pide a Codex que edite el guion integrado en `scripts/`. No se garantiza viralidad.
+El formato `prompt-ia` usa Google para desarrollar el guion y generar clips de video, ElevenLabs para la voz masculina y Remotion/FFmpeg para el montaje. Es una integración con la **API de Google**, independiente de Flow: no inicia sesión en Flow ni usa sus créditos o suscripciones. Requiere acceso a los modelos y facturación de las APIs correspondientes.
 
-Cada cambio a `main` y cada pull request ejecuta también **Verificar fábrica (demo)**: pruebas, TypeScript y un render de 10 segundos sin secretos ni API. Su artifact `demo-validada-[número]` permite revisar el funcionamiento antes de generar narraciones de pago.
+El proyecto prepara un retrato original del presentador y reutiliza su PNG como referencia común para los clips. El estilo puede inspirarse en una imagen indicada por el usuario; no promete una copia exacta ni identidad visual perfecta entre generaciones.
 
-## Tu primer video desde el iPhone
+## Primer video desde Safari
 
-1. Abre en Safari [Generar video 2D](https://github.com/reymondmiguel2907-del/fabrica-videos-ia/actions/workflows/generar-video.yml) e inicia sesión en GitHub con una cuenta que tenga permiso de escritura en el repositorio.
-2. Toca **Run workflow**. Selecciona la rama **main**.
-3. Escribe un **tema corto**, elige **formato: historia** y **15 segundos**, deja **demo** marcado y **efectos** desmarcado. Toca el botón verde **Run workflow**.
-4. Abre la ejecución más reciente. Si aún no aparece, actualiza la página. Espera a que el trabajo termine en verde; el render puede tardar varios minutos.
-5. En el resumen de la ejecución, baja hasta **Artifacts** y toca **video-[número]** para descargar el ZIP.
-6. En Safari, abre **Descargas** y luego el archivo en **Archivos**. Toca el ZIP para descomprimirlo, abre `video.mp4` y usa **Compartir → Guardar video** para añadirlo a Fotos.
-7. Abre TikTok y selecciona ese video desde Fotos. La fábrica prepara el archivo; la publicación la haces tú.
+1. Abre [Generar video 2D](https://github.com/reymondmiguel2907-del/fabrica-videos-ia/actions/workflows/generar-video.yml) e inicia sesión en GitHub con permiso de escritura.
+2. Toca **Run workflow**, selecciona **main** y elige **formato: prompt-ia**.
+3. Pega tu guion o instrucciones en **prompt**, hasta 5000 caracteres. **tema** es solo un nombre corto opcional, de hasta 120 caracteres.
+4. Selecciona una **duración** coherente con el prompt. Para probar sin gasto, deja **demo** marcado: verás una vista previa dibujada por código con voz robótica local, sin generación de clips IA.
+5. Para producir escenas con IA y voz de ElevenLabs, configura las dos claves descritas abajo y **desmarca demo**. Deja **efectos** desmarcado para evitar una petición adicional de sonido.
+6. Toca **Run workflow** y abre la ejecución. Espera a que termine en verde; la generación de clips y el render pueden tardar varios minutos.
+7. Baja a **Artifacts → video-[número]** y descarga el ZIP. En **Archivos**, tócalo para descomprimirlo; abre `video.mp4` y usa **Compartir → Guardar video** para añadirlo a Fotos.
 
-Si GitHub oculta el formulario en la vista móvil, usa el menú de página de Safari → **Solicitar sitio web de escritorio** y vuelve a abrir el enlace de Actions. Si Actions está desactivado, abre la pestaña **Actions** y habilítalo primero.
+Después puedes subir el archivo a TikTok. No se publica automáticamente. Si GitHub oculta el formulario en móvil, usa el menú de página de Safari → **Solicitar sitio web de escritorio**.
 
-### Generar el acertijo del mapa
+## Claves para generar con IA y voz real
 
-En **Run workflow**, selecciona estos valores:
+En el repositorio, abre **Settings → Secrets and variables → Actions → Secrets → New repository secret** y crea:
 
-| Campo | Valor |
+| Secreto | Uso |
 | --- | --- |
-| Rama | `main` |
-| Tema | `Acertijo del mapa` |
-| Formato | `acertijo-mapa` |
-| Duración | `60` |
-| Demo | Marcado (`true`) |
-| Efectos | Desmarcado (`false`) |
+| `GEMINI_API_KEY` | Guion estructurado y generación de clips mediante Google. |
+| `ELEVENLABS_API_KEY` | Narración masculina y, si los activas, efectos opcionales. |
 
-Copia **solo `Acertijo del mapa`** en tema; no pegues allí el guion completo. El preset ya contiene el guion, las escenas y los tiempos. Incluye una cuenta atrás entre los segundos 40 y 50 y revela la respuesta en el segundo 50. Este formato exige exactamente 60 segundos. Para personalizar el acertijo, pide a Codex que cambie su guion integrado.
+Obtén las credenciales desde [Google AI Studio](https://aistudio.google.com/apikey) y tu cuenta de ElevenLabs. No pegues las claves en el prompt, el tema, un issue o el código. Los secretos se inyectan únicamente al paso de generación; no se guardan en el artifact.
 
-La demo no usa la API. En modo real, la narración se solicita en una sola petición a ElevenLabs con alineación; el montaje inserta los silencios y la cuenta atrás en sus tiempos, sin generar una petición de voz por escena.
+La voz fija predeterminada es **Adam**, ID `pNInz6obpgDQGcFmaJgB`, con `eleven_multilingual_v2`. Para usar otra voz masculina de tu biblioteca, crea una **variable** de repositorio `ELEVENLABS_VOICE_ID` en la pestaña **Variables**. La disponibilidad depende de tu cuenta.
 
-### Qué hace el modo demo
+Las variables opcionales `GOOGLE_TEXT_MODEL` y `GOOGLE_VIDEO_MODEL` seleccionan los modelos. Sus valores predeterminados en la aplicación son `gemini-3.8-flash` y `gemini-omni-1.2-flash`, respectivamente. Los modelos, permisos y regiones cambian: confirma el acceso y los nombres vigentes en la [documentación de video de Google](https://aistudio.google.com/docs/video) y la [documentación de la API de Gemini](https://ai.google.dev/gemini-api/docs). Esta configuración no implica que una cuenta tenga acceso al modelo ni que se haya probado una llamada real con tus credenciales.
 
-`demo = true` no realiza ninguna llamada a ElevenLabs, aunque exista un secreto configurado. Produce animación, subtítulos y audio sintético local, **sin voz humana y sin gastar créditos de API**. Si activas efectos en demo, también son locales. El render en GitHub Actions sigue sujeto a los minutos y límites de tu cuenta de GitHub.
+Las llamadas reales pueden consumir créditos. No se reintentan automáticamente peticiones pagadas; ejecutar de nuevo puede cobrar de nuevo. Un fallo de API no se convierte silenciosamente en una demo.
 
-## Activar la voz masculina de ElevenLabs
+**Estado de verificación:** se utilizan pruebas simuladas y demos locales; la generación real con Google queda pendiente de configurar `GEMINI_API_KEY` y comprobar el acceso de la cuenta. No se afirma que los clips de API real estén probados.
 
-Haz primero una demo. Después, desde Safari:
+## Ejemplo de prompt: acertijo de 60 segundos
 
-1. En el repositorio, abre **Settings → Secrets and variables → Actions → Secrets → New repository secret**.
-2. Escribe exactamente `ELEVENLABS_API_KEY` como nombre y pega tu clave de ElevenLabs como valor. Guarda el secreto. No lo pegues en un issue, código, tema ni conversación.
-3. Vuelve a **Actions → Generar video 2D → Run workflow**, selecciona `main` y desmarca **demo**.
-4. Deja **efectos** desmarcado para generar solo la narración. Activarlo añade una petición de efecto de sonido a ElevenLabs y puede consumir créditos adicionales.
+En el formulario elige `formato: prompt-ia` y `duracion: 60`. Pega lo siguiente **en prompt**, no en tema:
 
-La voz predeterminada es **Adam**, ID `pNInz6obpgDQGcFmaJgB`, con modelo `eleven_multilingual_v2` y ajustes estables. Se reutiliza la misma voz en todas las ejecuciones. La disponibilidad depende de tu cuenta de ElevenLabs. Para elegir otra voz masculina de tu biblioteca, crea una **variable** de repositorio, no un secreto, llamada `ELEVENLABS_VOICE_ID` en **Settings → Secrets and variables → Actions → Variables** y escribe su ID. Se conserva ese ID hasta que lo cambies.
+```text
+Crea un video vertical de 60 segundos para TikTok. Estilo humano cartoon 2D: un presentador joven con camiseta verde y jeans, contornos limpios, fondo azul, iconos de cerebros y signos de pregunta. Mantén el mismo personaje y estilo en todos los planos. Voz masculina en español, clara y natural. Subtítulos blancos grandes con contorno negro, dentro del área segura móvil.
 
-La narración devuelve tiempos por carácter para sincronizar los subtítulos. FFmpeg ajusta el audio a la duración elegida dentro de los límites admitidos por la aplicación; un desfase excesivo detiene la ejecución con una explicación. Los errores de voz no se convierten silenciosamente en una demo. No hay reintentos automáticos de peticiones pagadas para evitar cobros duplicados; volver a ejecutar manualmente puede consumir créditos de nuevo.
+0–8 s: Gancho. El presentador mira a cámara y pregunta: «Tengo ciudades, pero no casas; montañas, pero no árboles; y agua, pero no peces. ¿Qué soy?» Muestra iconos de ciudad, montaña y río.
+8–25 s: Repite visualmente las tres pistas, una por una, con cambios de encuadre y animaciones sencillas. No muestres todavía un mapa ni su respuesta.
+25–40 s: Invita a pensar. El presentador observa las pistas y aparece un cerebro animado. Di: «Piensa en algo que representa muchos lugares sin contenerlos de verdad».
+40–50 s: Haz una cuenta atrás de diez segundos en pantalla, con pulsos suaves. Sin narración ni revelación durante este intervalo.
+50–57 s: Revela la respuesta: «¡Un mapa!» Muestra un mapa desplegándose y conecta sus símbolos con las tres pistas.
+57–60 s: Cierre breve: «¿Lo adivinaste antes de la cuenta atrás?»
+```
 
-## Entradas del formulario
+En **demo** se previsualiza el estilo con una ilustración por código y voz robótica española. La demo usa un texto de prueba y **no interpreta el prompt ni genera escenas nuevas con IA gratis**. Para cambiar a clips IA, conserva los campos y desmarca `demo` tras configurar las claves.
 
-| Entrada | Uso |
+## Formatos y entradas
+
+| Campo | Función |
 | --- | --- |
-| `tema` | Solo título corto en español, de 1 a 120 caracteres. Ejemplo: `Acertijo del mapa`. No admite el guion completo ni un prompt largo. Se trata como datos, nunca como un comando. |
-| `formato` | `historia` (predeterminado) o `acertijo-mapa` (guion integrado de 60 segundos). |
-| `duracion` | El formulario permite 10, 15, 30, 45 o 60 segundos. `acertijo-mapa` exige `60`. Localmente, `historia` admite enteros entre 10 y 60. |
-| `demo` | Marcado de forma predeterminada: sin API ni voz humana. |
-| `efectos` | Opcional; desmarcado de forma predeterminada. En modo real puede gastar créditos. |
+| `prompt` | Guion o instrucciones completas, hasta 5000 caracteres, para `prompt-ia`. Puede incluir varias líneas. |
+| `tema` | Nombre corto opcional, máximo 120 caracteres. No pegues aquí el guion. |
+| `formato` | `prompt-ia` por defecto; `historia` y `acertijo-mapa` conservan las plantillas anteriores. |
+| `duracion` | 10, 15, 30, 45 o 60 segundos en el formulario. Usa una duración coherente con el prompt. |
+| `demo` | Marcado por defecto: vista previa con dibujos de código y voz robótica local, sin API. |
+| `efectos` | Opcional. Fuera de demo puede gastar créditos adicionales de ElevenLabs. |
 
-## Archivos descargables
+`historia` crea una microhistoria con plantillas locales. `acertijo-mapa` usa el guion integrado y exige exactamente **60 segundos**, con cuenta atrás entre 40–50 y respuesta a los 50. Para esos formatos, el guion se modifica en el código con Codex. El formato libre es `prompt-ia`.
 
-Cada ejecución correcta publica un artifact `video-[número]` con:
+## Descarga y validación
 
-| Archivo | Contenido |
-| --- | --- |
-| `video.mp4` | Video H.264 con audio AAC y compatibilidad para reproducción móvil. |
-| `storyboard.json` | Guion, escenas y tiempos utilizados para el render. |
-| `subtitles.srt` | Copia reutilizable de los subtítulos incluidos en el video. |
-| `validation.json` | Resultado de la validación técnica con ffprobe. |
+El artifact contiene `video.mp4`, `storyboard.json`, `subtitles.srt` y `validation.json`. En generación con IA incluye además **`clips/`**, con escenas individuales descargables, y **`plan.json`** cuando se genera el plan. La conservación es de **7 días**.
 
-Se comprueban las pistas, códecs, resolución y duración del MP4 antes de publicar. Los artifacts se conservan **7 días**. Descárgalos antes de que expiren. El repositorio es público: los videos y guiones descargables pueden ser accesibles a otros usuarios de GitHub; no introduzcas datos privados en el tema.
+Si la ejecución falla después de generar algunas escenas, el artifact **`escenas-parciales-[número]`** conserva los clips disponibles y el plan. Permite recuperar esas escenas sin presentarlas como un MP4 final validado; si no hay archivos, no se crea ese artifact.
 
-## Desarrollo local
+Antes de publicar el artifact, se validan códecs H.264/AAC, resolución, duración y volumen de audio; una pista silenciosa se rechaza. El repositorio es público: no introduzcas datos privados en guiones o prompts que pasarán a los archivos descargables. No se garantiza viralidad ni que un modelo respete perfectamente cada detalle visual.
 
-Requisitos: Node.js 22 o posterior, npm, FFmpeg y ffprobe en `PATH`. Remotion descarga un navegador para el render y necesita conexión la primera vez. Si ya tienes Chromium o Chrome, puedes indicar su ruta mediante `REMOTION_BROWSER_EXECUTABLE=/ruta/al/navegador`. Actions utiliza Chrome del runner cuando está disponible. El modo demo no consume APIs de contenido.
+## Desarrollo y diagnóstico
+
+Requisitos: Node.js 22+, FFmpeg, ffprobe y **espeak-ng** en `PATH`. Remotion usa Chrome/Chromium; puedes indicar su ruta con `REMOTION_BROWSER_EXECUTABLE`. Los workflows instalan la voz local y FFmpeg. Cada cambio a `main` o pull request ejecuta pruebas, TypeScript y una demo sin secretos.
 
 ```sh
 npm ci
 npm test
 npm run typecheck
-VIDEO_THEME='Una idea pequeña cambia el día' VIDEO_FORMAT=historia VIDEO_DURATION=15 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
+VIDEO_FORMAT=prompt-ia VIDEO_PROMPT='Un presentador cartoon 2D hace una pregunta y revela la respuesta al final.' VIDEO_DURATION=15 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
 ```
 
-Para probar el preset completo:
+El paso **Validar formulario** comprueba las entradas sin claves ni gasto antes de instalar dependencias. Si el tema supera el límite, deja un nombre corto y mueve el texto largo a **prompt**. Si el preset `acertijo-mapa` rechaza la duración, elige 60. Si falla una llamada real, revisa acceso al modelo, facturación, cuota y permisos de las claves en los servicios correspondientes. No compartas las claves para diagnosticarlo.
 
-```sh
-VIDEO_THEME='Acertijo del mapa' VIDEO_FORMAT=acertijo-mapa VIDEO_DURATION=60 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
-```
-
-Para una narración real, define `ELEVENLABS_API_KEY` mediante tu gestor de secretos o entorno local y usa `VIDEO_DEMO=false`. No escribas la clave en archivos versionados ni en el historial del terminal. En GitHub Actions solo se inyecta al paso de generación. `ELEVENLABS_VOICE_ID` es opcional.
-
-El código, la Skill y los archivos de configuración son reutilizables. Antes de dar uso comercial a Remotion, revisa su [licencia vigente](https://www.remotion.dev/license); ElevenLabs también aplica sus condiciones y límites de cuenta.
-
-## Si la ejecución falla
-
-Abre la ejecución roja y el paso que falló. Los mensajes indican el problema sin mostrar claves ni el cuerpo de errores del proveedor.
-
-El paso **Validar formulario** comprueba el título, el formato y la duración antes de instalar dependencias o generar contenido. No usa secretos ni gasta créditos. La clave se comprueba posteriormente, solo si eliges una narración real.
-
-| Problema | Qué revisar |
-| --- | --- |
-| El tema supera 120 caracteres | En tema escribe únicamente un título corto, por ejemplo `Acertijo del mapa`. El texto del guion va en el preset del código; no lo pegues en el formulario. |
-| El formato acertijo-mapa requiere 60 segundos | Selecciona `duracion: 60`; las pausas, cuenta atrás y respuesta tienen tiempos fijos. |
-| Falta la clave | Crea el secreto `ELEVENLABS_API_KEY` o activa `demo`. |
-| Autorización o voz no disponible | Verifica la clave, sus permisos y el ID de voz en tu cuenta de ElevenLabs. |
-| Cuota o límite de solicitudes | Revisa tus créditos y límites en ElevenLabs antes de volver a ejecutar. |
-| Tiempo de voz incompatible | Prueba una duración distinta o simplifica el guion en el planificador. |
-| Fallo de render o tiempo agotado | Prueba 10 o 15 segundos y revisa el paso de generación. |
-| Validación del MP4 fallida | No se publica un artifact de video; revisa el diagnóstico del generador. |
-
-La Skill de Codex está en [`.agents/skills/videos-virales-2d/SKILL.md`](.agents/skills/videos-virales-2d/SKILL.md). Describe cómo crear o modificar historias, producir el MP4 y comprobar el resultado.
+La Skill está en [`.agents/skills/videos-virales-2d/SKILL.md`](.agents/skills/videos-virales-2d/SKILL.md). Para uso comercial, revisa la [licencia de Remotion](https://www.remotion.dev/license) y las condiciones de Google y ElevenLabs.

@@ -19,10 +19,10 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - name: Instalar FFmpeg
+      - name: Instalar FFmpeg y voz local
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg espeak-ng
       - run: npm ci
       - run: npm test
       - run: npm run typecheck
@@ -34,6 +34,8 @@ jobs:
       - name: Render demo sin secretos ni API
         env:
           VIDEO_THEME: Una idea pequeña cambia el día
+          VIDEO_PROMPT: Crea una historia breve de 10 segundos con un presentador humano cartoon 2D sobre fondo azul, una pregunta curiosa y la respuesta al final.
+          VIDEO_FORMAT: prompt-ia
           VIDEO_DURATION: '10'
           VIDEO_DEMO: 'true'
           VIDEO_SFX: 'true'
@@ -41,10 +43,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: demo-validada-${{ github.run_number }}
-          path: |
-            out/video.mp4
-            out/storyboard.json
-            out/subtitles.srt
-            out/validation.json
+          path: out/
           if-no-files-found: error
           retention-days: 7
