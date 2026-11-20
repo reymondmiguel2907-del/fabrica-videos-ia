@@ -1,88 +1,74 @@
 ---
 name: videos-virales-2d
-description: Crea conceptos, guiones, storyboards y planes de producción para videos cortos de animación 2D orientados a retención en TikTok, Reels y Shorts. Úsala cuando se soliciten videos cortos 2D, historias animadas o revisiones de sus guiones y escenas.
+description: Crea y modifica videos verticales de animación 2D para TikTok en fabrica-videos-ia. Usa esta habilidad al escribir guiones, ajustar escenas Remotion, generar narración ElevenLabs o producir y validar MP4 mediante el workflow manual y el generador local.
 ---
 
 # Videos virales 2D
 
-## Objetivo
+## Objetivo y alcance
 
-Convertir una idea en un video corto 2D con un gancho claro, desarrollo visual y cierre memorable. Optimizar claridad y retención sin prometer viralidad ni inventar métricas de rendimiento.
+Transformar un tema en una microhistoria animada con gancho, progresión y cierre. Producir MP4 de 1080 × 1920, 30 fps, video H.264 y audio AAC mediante Remotion y FFmpeg. Mejorar claridad y retención sin prometer viralidad ni inventar métricas.
 
-## Entradas y valores por defecto
+Este proyecto usa un planificador local de historias, sin API de texto. Los temas inspiran ficción; no presentar las frases generadas como hechos investigados. Para contenidos educativos o afirmaciones verificables, contrastar las fuentes y adaptar el guion antes de narrar.
 
-Recoger el tema o idea, público, plataforma, duración, idioma, tono y referencias disponibles. Aprovechar primero la información de la conversación y del proyecto.
+## Contexto y entradas
 
-Si falta el tema y no puede inferirse, pedirlo. Para los demás campos, avanzar con estos valores e indicar las suposiciones:
-- Formato vertical 9:16, 1080 × 1920, 30 fps.
-- Duración de 30 segundos.
-- Idioma del usuario y tono cercano.
-- Animación 2D original, formas simples y alto contraste.
+Leer `README.md`, los archivos actuales en `scripts/`, `src/` y `.github/workflows/generar-video.yml` antes de cambiar contratos entre planificador, narración y render.
 
-Las indicaciones del usuario prevalecen sobre estos valores. Mantener sus personajes, referencias y mensajes aprobados.
+Reutilizar el tema y las preferencias de la conversación. Si falta el tema y no puede inferirse, pedirlo. Valores de partida:
 
-## Flujo de trabajo
+- Duración: 15 segundos; el formulario admite 10, 15, 30, 45 o 60.
+- Español, tono cercano y personajes originales en 2D.
+- Formato vertical 9:16, con subtítulos dentro del área segura móvil.
+- `VIDEO_DEMO=true`: sin llamadas a ElevenLabs, audio sintético local sin voz humana.
+- `VIDEO_SFX=false`: efectos opcionales desactivados.
 
-### 1. Concepto y gancho
+Las instrucciones del usuario prevalecen sobre los valores por defecto. Conservar personajes, referencias y textos ya aprobados.
 
-Definir una idea central y la reacción que se busca provocar: curiosidad, humor, sorpresa o identificación. Proponer hasta tres ganchos cuando el usuario no haya elegido uno y seleccionar el más claro para desarrollar.
+## Flujo creativo
 
-Mostrar el conflicto, pregunta o situación desde los primeros segundos. Evitar introducciones largas, afirmaciones engañosas y promesas que el cierre no resuelva.
+1. Definir una idea central y un gancho visible en los primeros segundos.
+2. Escribir una narración breve: gancho → obstáculo → acción → giro → resolución. Ajustar cantidad de palabras a la duración.
+3. Dividir el guion en escenas contiguas; cada escena tiene una acción principal y propósito narrativo. Mantener sincronizados narración, títulos y subtítulos.
+4. Mantener silueta, paleta y proporciones de los personajes entre planos. Animar con los frames de Remotion; evitar aleatoriedad no determinista, peticiones de red o fuentes externas durante el render.
+5. Acompañar la historia con movimiento y transiciones legibles. Mantener texto breve, contrastado y lejos de la interfaz de TikTok. Evitar destellos rápidos.
 
-### 2. Guion
+## Generación y voz
 
-Para 30 segundos, usar como guía:
-- 0–3 s: gancho visual y verbal.
-- 3–10 s: contexto mínimo y objetivo del personaje.
-- 10–24 s: progresión, obstáculo o giro.
-- 24–30 s: resolución y, cuando aporte valor, una llamada a la acción o un enlace visual con el inicio.
+Preparar Node.js 22+, FFmpeg y ffprobe. Instalar y revisar:
 
-Ajustar estos intervalos a la duración solicitada. Escribir frases breves que puedan narrarse con naturalidad; comprobar su duración con la voz real cuando esté disponible. Distinguir ficción de afirmaciones verificables y contrastar estas últimas antes de presentarlas como hechos.
+```sh
+npm ci
+npm test
+npm run typecheck
+```
 
-### 3. Storyboard
+Probar primero una demo corta:
 
-Dividir el guion en escenas que cubran toda la duración sin huecos ni solapamientos. Usar esta tabla:
+```sh
+VIDEO_THEME='Una idea pequeña cambia el día' VIDEO_DURATION=15 VIDEO_DEMO=true VIDEO_SFX=false npm run generate
+```
 
-| Escena | Inicio–fin | Narración o diálogo | Acción y encuadre | Texto en pantalla | Sonido |
-| --- | --- | --- | --- | --- | --- |
+En modo real, `VIDEO_DEMO=false` usa el secreto de GitHub Actions `ELEVENLABS_API_KEY`. La voz masculina fija predeterminada es Adam (`pNInz6obpgDQGcFmaJgB`); `ELEVENLABS_VOICE_ID` permite seleccionar otra voz disponible sin cambiarla de forma aleatoria entre videos. Mantener ajustes estables y utilizar los tiempos devueltos por ElevenLabs para los subtítulos. FFmpeg ajusta duración dentro de los límites del generador.
 
-Asignar a cada escena una acción principal comprensible. Hacer que los cambios de plano, movimiento o expresión acompañen la historia. Mantener los textos breves y fuera de las zonas ocupadas por la interfaz de la plataforma.
+Nunca imprimir, leer para mostrar, versionar o incluir secretos en artifacts, storyboard, props de Remotion o mensajes de error. No registrar cuerpos crudos de errores del proveedor. El modo demo debe ignorar las credenciales y no realizar peticiones de contenido. Las llamadas reales consumen créditos; no añadir reintentos automáticos tras peticiones pagadas ni sustituir un error real por una demo sin avisar.
 
-### 4. Personajes y recursos
+## Control desde iPhone
 
-Antes de producir escenas, definir:
-- Personajes: silueta, colores, vestuario, proporciones y expresiones.
-- Estilo: paleta, trazo, fondos, tipografía y tratamiento del movimiento.
-- Recursos: personajes, fondos, objetos, voz, música y efectos necesarios.
+Usar `.github/workflows/generar-video.yml`, ejecución manual `workflow_dispatch`, rama `main`. Sus entradas son `tema`, `duracion`, `demo` y `efectos`. Pasarlas como variables de entorno; nunca interpolar el tema o secretos directamente dentro de comandos de shell.
 
-Crear una especificación o prompt por recurso y escena. Repetir las características esenciales de los personajes para conservar continuidad. Usar material propio, autorizado o con licencia compatible y documentar su procedencia cuando corresponda.
+En Safari: Actions → Generar video 2D → Run workflow → main → completar entradas → Run workflow. Tras una ejecución verde, descargar el artifact `video-[número]`, descomprimirlo en Archivos y compartir `video.mp4` a Fotos. Publicar en TikTok solo cuando el usuario lo solicite.
 
-### 5. Producción y montaje
+## Validación y entrega
 
-Si se solicita el video final, revisar las herramientas disponibles y las instrucciones del proyecto antes de elegir cómo producirlo. No imponer un proveedor o una biblioteca.
+Ejecutar las pruebas pertinentes y el chequeo de TypeScript tras cambios. Renderizar una demo cuando se modifiquen composición, tiempos, audio o montaje. No gastar créditos para comprobar cambios de código si las pruebas simuladas y el modo demo cubren el caso.
 
-Generar o preparar los recursos, sincronizar narración y animación, añadir subtítulos cuando haya voz y mezclar música y efectos sin tapar el diálogo. Mantener textos legibles en móvil y evitar destellos rápidos.
+Antes de declarar éxito:
 
-Exportar, salvo indicación distinta, un MP4 con video H.264 y audio AAC cuando haya sonido. Si una capacidad necesaria no está disponible, entregar los materiales preparados y explicar exactamente qué falta para completar el video; no presentar un guion o un storyboard como un render terminado.
+- Revisar que ffprobe confirme 1080 × 1920, H.264, pista AAC y duración solicitada dentro de la tolerancia del generador.
+- Verificar que el storyboard cubra todos los frames sin huecos y los subtítulos correspondan a la narración.
+- Inspeccionar frames representativos y escuchar el audio si hay reproducción disponible; distinguir estas revisiones de la validación técnica.
+- Comprobar que existan `out/video.mp4`, `out/storyboard.json`, `out/subtitles.srt` y `out/validation.json`.
+- Informar qué se probó, qué queda pendiente y el enlace de descarga cuando exista. No presentar una simulación o un storyboard como un video terminado.
 
-### 6. Revisión
-
-Antes de entregar:
-- Comprobar que el inicio presenta el gancho y el cierre lo resuelve.
-- Verificar duración, continuidad de personajes y cobertura del storyboard.
-- Revisar ortografía, legibilidad móvil y sincronización de voz y subtítulos.
-- Si hay un render, reproducirlo y comprobar dimensiones, sonido y ausencia de cuadros vacíos o recursos faltantes.
-- Diferenciar las comprobaciones realizadas de las pendientes.
-
-## Entrega
-
-Adaptar el alcance a lo pedido: una solicitud de ideas o guion no requiere renderizar un video.
-
-Para un paquete completo, entregar:
-1. Concepto elegido y supuestos utilizados.
-2. Guion y storyboard con tiempos.
-3. Especificaciones o prompts y lista de recursos.
-4. Video final y archivos editables, si se produjeron, con sus ubicaciones.
-5. Texto breve de publicación y etiquetas pertinentes cuando se soliciten.
-
-Informar el estado real de los archivos y cualquier limitación pendiente. Publicar o enviar el contenido solo cuando el usuario lo solicite.
+No incluir dependencias, credenciales, temporales ni renders grandes en Git. El workflow publica únicamente los cuatro entregables, con retención de 7 días. Revisar que el contenido sea adecuado para un artifact de un repositorio público.

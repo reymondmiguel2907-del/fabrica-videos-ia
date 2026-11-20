@@ -1,0 +1,112 @@
+name: Generar video 2D
+
+on:
+  workflow_dispatch:
+    inputs:
+      tema:
+        description: Tema de la microhistoria (máximo 120 caracteres)
+        required: true
+        type: string
+        default: Una idea pequeña cambia el día
+      duracion:
+        description: Duración del video en segundos
+        required: true
+        type: choice
+        default: '15'
+        options:
+          - '10'
+          - '15'
+          - '30'
+          - '45'
+          - '60'
+      demo:
+        description: Demo sin API (audio sintético, sin voz humana ni créditos)
+        required: true
+        type: boolean
+        default: true
+      efectos:
+        description: Añadir un efecto (puede consumir créditos fuera de demo)
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  generar:
+    name: Renderizar y validar MP4
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Instalar FFmpeg y ffprobe
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version
+          ffprobe -version
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Verificar código
+        run: |
+          npm test
+          npm run typecheck
+
+      - name: Usar Chrome del runner si está disponible
+        run: |
+          if command -v google-chrome > /dev/null 2>&1; then
+            echo "REMOTION_BROWSER_EXECUTABLE=$(command -v google-chrome)" >> "$GITHUB_ENV"
+          fi
+
+      - name: Generar video
+        env:
+          VIDEO_THEME: ${{ inputs.tema }}
+          VIDEO_DURATION: ${{ inputs.duracion }}
+          VIDEO_DEMO: ${{ inputs.demo }}
+          VIDEO_SFX: ${{ inputs.efectos }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ vars.ELEVENLABS_VOICE_ID }}
+        run: npm run generate
+
+      - name: Comprobar entregables
+        run: |
+          test -s out/video.mp4
+          test -s out/storyboard.json
+          test -s out/subtitles.srt
+          test -s out/validation.json
+
+      - name: Publicar video descargable
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-${{ github.run_number }}
+          path: |
+            out/video.mp4
+            out/storyboard.json
+            out/subtitles.srt
+            out/validation.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Mostrar instrucciones de descarga
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'SUMMARY'
+          ## Video listo
+
+          Abre el resumen de esta ejecución y toca **Artifacts → video-[número]**.
+          El ZIP contiene `video.mp4`, `storyboard.json`, `subtitles.srt` y `validation.json`.
+          En iPhone: descarga el ZIP, ábrelo en **Archivos** y descomprímelo.
+          Abre `video.mp4` y usa **Compartir → Guardar video** para llevarlo a Fotos.
+
+          El artifact se conserva durante 7 días. No se publica automáticamente en TikTok.
+          SUMMARY

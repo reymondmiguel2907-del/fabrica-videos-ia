@@ -1,0 +1,50 @@
+name: Verificar fábrica (demo)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Instalar FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - name: Seleccionar navegador disponible
+        run: |
+          if command -v google-chrome > /dev/null 2>&1; then
+            echo "REMOTION_BROWSER_EXECUTABLE=$(command -v google-chrome)" >> "$GITHUB_ENV"
+          fi
+      - name: Render demo sin secretos ni API
+        env:
+          VIDEO_THEME: Una idea pequeña cambia el día
+          VIDEO_DURATION: '10'
+          VIDEO_DEMO: 'true'
+          VIDEO_SFX: 'true'
+        run: npm run generate
+      - uses: actions/upload-artifact@v4
+        with:
+          name: demo-validada-${{ github.run_number }}
+          path: |
+            out/video.mp4
+            out/storyboard.json
+            out/subtitles.srt
+            out/validation.json
+          if-no-files-found: error
+          retention-days: 7
