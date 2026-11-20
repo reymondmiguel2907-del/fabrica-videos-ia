@@ -70,4 +70,21 @@ test('real FFmpeg: full-range source, retimed narration and optional delayed eff
     decoded.push(stdout);
   }
   assert.notDeepEqual(decoded[0], decoded[1], 'enabling SFX must change the encoded soundtrack');
+  const amplitude = (samples, from, until, frequency) => {
+    let real = 0, imaginary = 0;
+    const first = Math.round(from * 44_100);
+    const last = Math.round(until * 44_100);
+    for (let index = first; index < last; index++) {
+      const sample = samples.readFloatLE(index * 4);
+      const angle = 2 * Math.PI * frequency * index / 44_100;
+      real += sample * Math.cos(angle);
+      imaginary += sample * Math.sin(angle);
+    }
+    return 2 * Math.hypot(real, imaginary) / (last - first);
+  };
+  const background = Math.max(0.001, amplitude(decoded[1], 0.3, 0.4, 1100));
+  assert.ok(amplitude(decoded[1], 0.05, 0.12, 1100) > background * 4,
+    'first SFX is audible near the first requested transition');
+  assert.ok(amplitude(decoded[1], 0.55, 0.62, 1100) > background * 4,
+    'second SFX is audible near the delayed transition');
 });
